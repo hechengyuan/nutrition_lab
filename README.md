@@ -1,6 +1,7 @@
 ## Introduction
 
 This is a website based on Django and Vue.js. Version now v-1.0.
+You can use it [by click here](http://www.rdworkspace.com/)
 
 ### Function
 
