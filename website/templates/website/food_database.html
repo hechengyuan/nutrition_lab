@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <link href="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.js"></script>
+    <script src="https://cdn.bootcss.com/reqwest/2.0.5/reqwest.js"></script>
+    <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
+    <script src="https://cdn.bootcss.com/js-cookie/latest/js.cookie.js"></script>
+    <title>Database</title>
+  </head>
+  <body>
+
+    {% verbatim %}
+
+    <div id="app1">
+
+      <div class="ui large top inverted teal fixed menu">
+        <div class="ui container">
+          <a class="item" v-on:click="toHomePage">Home</a>
+          <a class="active item">Database</a>
+          <a class="item" v-on:click="toPatient">Patients</a>
+          <a class="item" v-on:click="toRecipe">Recipes</a>
+          <a class="item" v-on:click="toAssessment">Assessment</a>
+          <div class="right menu">
+            <div class="item">
+              <a class="ui inverted teal button" v-on:click="logOut">Log Out</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ui vertical segment" style="padding-top:96px; padding-bottom:128px;">
+
+        <div class="ui doubling stackable grid container">
+          <div class="twelve wide centered column">
+
+              <h1 class="ui teal center aligned header">All foods' Nutrients</h1>
+
+              <table class="ui celled table">
+
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Calories(kcal)</th>
+                    <th>Carbohydate(g)</th>
+                    <th>Protein(g)</th>
+                    <th>Fat(g)</th>
+                    <th>Fiber(g)</th>
+                    <th>Sodium(mg)</th>
+                    <th>P(mg)</th>
+                    <th>K(mg)</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr v-for="food in foods">
+                    <td>{{ food.food_name }}</td>
+                    <td>{{ food.calorie }}</td>
+                    <td>{{ food.carbohydrate }}</td>
+                    <td>{{ food.protein }}</td>
+                    <td>{{ food.fat }}</td>
+                    <td>{{ food.fiber }}</td>
+                    <td>{{ food.sodium }}</td>
+                    <td>{{ food.phosphorus }}</td>
+                    <td>{{ food.potassium }}</td>
+                  </tr>
+                </tbody>
+
+              </table>
+
+              <div class="ui page centered grid" style="padding-top:32px;">
+
+                <div class="ui borderless pagination menu">
+                    <a class="item" v-on:click="getPreviousPage">   ←Previous  </a>
+                    <i class="item">Now Page {{ page }}</i>
+                    <a class="item" v-on:click="getNextPage">  Next→  </a>
+                  </div>
+
+              </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    {% endverbatim %}
+
+    <script type="text/javascript">
+
+      var app1 = new Vue({
+        el: "#app1",
+        data:{
+          modal: true,
+          foods: [],
+          page: 1,
+        },
+        methods:{
+          getData: function (){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:food_list_api" %}' + '?page=' + self.page,
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.foods = resp;
+              }
+            });
+          },
+          getNextPage: function (){
+            var self = this;
+            self.page = self.page + 1;
+            self.getData();
+          },
+          getPreviousPage: function(){
+            var self = this;
+            if (self.page < 2){
+            }else{
+              self.page = self.page - 1;
+              self.getData();
+            };
+          },
+          logOut:function(){
+            Cookies.remove("token");
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toHomePage:function(){
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toPatient:function(){
+            window.location.href = '{% url "website:patient" %}';
+          },
+          toAssessment:function(){
+            window.location.href = '{% url "website:assessment_all" %}';
+          },
+          toRecipe:function(){
+            window.location.href = '{% url "website:recipe_all" %}';
+          },
+
+        },
+        mounted:function(){
+          if (Cookies.get("token")){
+            this.getData();
+          } else {
+            window.location.href = '{% url "website:homepage" %}';
+          };
+        },
+      });
+
+    </script>
+
+  </body>
+</html>

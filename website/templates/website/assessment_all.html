@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <link href="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.js"></script>
+    <script src="https://cdn.bootcss.com/reqwest/2.0.5/reqwest.js"></script>
+    <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
+    <script src="https://cdn.bootcss.com/js-cookie/latest/js.cookie.js"></script>
+    <title>Assessment</title>
+  </head>
+  <body>
+
+    {% verbatim %}
+
+    <div class="pusher" id="app1">
+
+      <div class="ui dimmer active" v-if="!modal.seen">
+        <div class="ui modal active" style="max-width: 450px;">
+          <form class="ui large form">
+            <div class="ui stacked segment">
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="assessment_form.index" type="text" placeholder="序号">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input type="text" v-model="assessment_form.patient" placeholder="患者id">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="assessment_form.generated_person" type="text" placeholder="评估医生">
+                </div>
+              </div>
+              <div class="ui fluid large teal submit button" v-if="post_button" v-on:click="postData">新增</div>
+              <div class="ui fluid large teal submit button" v-if="!post_button" v-on:click="putData">修改</div>
+            </div>
+
+            <div class="ui error message"></div>
+
+          </form>
+        </div>
+        <div class="ui modal active" style="max-width: 64px; position:relative; top:30%;" >
+          <div v-on:click="reverseSeen" class=" ui mini button">
+            关闭
+          </div>
+        </div>
+      </div>
+
+      <div class="ui large top inverted teal fixed menu">
+        <div class="ui container">
+          <a class="item" v-on:click="toHomePage">Home</a>
+          <a class="item" v-on:click="toDatabase">Database</a>
+          <a class="item" v-on:click="toPatient">Patients</a>
+          <a class="item" v-on:click="toRecipe">Recipes</a>
+          <a class="active item">Assessment</a>
+          <div class="right menu">
+            <div class="item">
+              <a class="ui inverted teal button" v-on:click="logOut">Log Out</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ui vertical segment" style="padding-top:96px; padding-bottom:128px;">
+
+        <div class="ui doubling stackable grid container">
+          <div class="twelve wide centered column">
+
+              <h1 class="ui teal center aligned header">Assessment of All</h1>
+
+              <a class="ui teal mini right floated button" v-on:click="postWakeForm" style="margin-bottom:16px;">New</a>
+
+              <table class="ui celled table">
+
+                <thead>
+                  <tr>
+                    <th>Index</th>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>Time</th>
+                    <th>Disease</th>
+                    <th>Doctor</th>
+                    <th>Abstract</th>
+                    <th>Detail</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr v-for="assessment in assessments">
+                    <td>{{ assessment.index }}</td>
+                    <td>{{ assessment.patient.name }}</td>
+                    <td>{{ assessment.patient.age }}</td>
+                    <td>{{ assessment.patient.gender=1?("男"):("女") }}</td>
+                    <td>{{ assessment.generated_time.slice(0,19).replace(/T/, " ") }}</td>
+                    <td>{{ assessment.patient.disease }}</td>
+                    <td>{{ assessment.generated_person }}</td>
+                    <td><a v-on:click="putWakeForm(assessment)">modify</a></td>
+                    <td><a v-on:click="editAssessment(assessment)">edit</a></td>
+                  </tr>
+
+                </tbody>
+
+              </table>
+
+              <div class="ui page centered grid" style="padding-top:32px;">
+
+                <div class="ui borderless pagination menu">
+                    <a class="item"v-on:click="getPreviousPage">   ←Previous  </a>
+                    <i class="item">Now Page {{ page }}</i>
+                    <a class="item" v-on:click="getNextPage">  Next→  </a>
+                  </div>
+
+              </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    {% endverbatim %}
+
+    <script type="text/javascript">
+
+      var app1 = new Vue({
+        el: "#app1",
+        data:{
+          modal:{
+            seen:true,
+          },
+          assessments:[],
+          page:1,
+          assessment_form:{
+            id:"",
+            index:"",
+            patient:"",
+            generated_person:"",
+          },
+          post_button: true,
+        },
+        methods:{
+          getData: function (){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:assessment_list_api" %}' + '?page=' + self.page,
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.assessments = resp;
+              }
+            });
+          },
+          postData: function(){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:assessment_list_api" %}',
+              method: 'post',
+              type: 'json',
+              headers: {
+                "Authorization":"Token " + Cookies.get("token"),
+              },
+              data:{
+                index: self.assessment_form.index,
+                patient: self.assessment_form.patient,
+                generated_person: self.assessment_form.generated_person,
+              },
+              success: function(resp){
+                self.getData();
+                for (var key in self.assessment_form){
+                  self.assessment_form[key] = "";
+                };
+                self.reverseSeen();
+              }
+            });
+          },
+          reverseSeen:function() {
+            var self = this;
+            self.modal.seen = !self.modal.seen
+          },
+          putData: function(){
+            var self = this;
+            reqwest({
+              url: "{% url "lab:assessment_list_api" %}" + self.assessment_form.id + '/',
+              type: 'json',
+              method:'put',
+              headers: {
+                "Authorization":"Token " + Cookies.get("token"),
+              },
+              data:{
+                index: self.assessment_form.index,
+                patient: self.assessment_form.patient,
+                generated_person: self.assessment_form.generated_person,
+              },
+              success: function(resp){
+                self.getData();
+                for (var key in self.assessment_form){
+                  self.assessment_form[key] = "";
+                };
+                self.reverseSeen();
+              },
+            });
+          },
+          cleanForm:function(){
+            var self = this;
+            for (var key in self.assessment_form){
+              self.assessment_form[key] = null;
+            };
+          },
+          postWakeForm:function(){
+            var self = this;
+            self.post_button = true;
+            self.cleanForm();
+            self.reverseSeen();
+          },
+          putWakeForm: function(assessment){
+            var self = this;
+            var id = assessment.id;
+            reqwest({
+              url: "{% url "lab:assessment_list_api" %}" + id + '/',
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.assessment_form.id = resp.id;
+                self.assessment_form.index = resp.index;
+                self.assessment_form.patient = resp.patient.id;
+                self.assessment_form.generated_person = resp.generated_person;
+                self.post_button = false;
+                self.reverseSeen();
+              },
+            });
+          },
+          getNextPage: function (){
+            var self = this;
+            self.page = self.page + 1;
+            self.getData();
+          },
+          getPreviousPage: function(){
+            var self = this;
+            if (self.page < 2){
+            }else{
+              self.page = self.page - 1;
+              self.getData();
+            };
+          },
+          editAssessment:function (assessment) {
+            window.location.href = "{% url "website:assessment_all" %}" + assessment.id + '/';
+          },
+          logOut:function(){
+            Cookies.remove("token");
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toHomePage:function(){
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toPatient:function(){
+            window.location.href = '{% url "website:patient" %}';
+          },
+          toDatabase:function(){
+            window.location.href = '{% url "website:food_database" %}';
+          },
+          toRecipe:function(){
+            window.location.href = '{% url "website:recipe_all" %}';
+          },
+        },
+        mounted:function(){
+          if (Cookies.get("token")){
+            this.getData();
+          } else {
+            window.location.href = '{% url "website:homepage" %}';
+          };
+        },
+      });
+
+    </script>
+
+
+  </body>
+</html>

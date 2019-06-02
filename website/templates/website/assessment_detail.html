@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <link href="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.js"></script>
+    <script src="https://cdn.bootcss.com/reqwest/2.0.5/reqwest.js"></script>
+    <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
+    <script src="https://cdn.bootcss.com/js-cookie/latest/js.cookie.js"></script>
+    <title>detail page</title>
+  </head>
+  <body>
+
+    {% verbatim %}
+
+    <div class="pusher" id="app1">
+
+      <div class="ui dimmer fixed active" v-if="!modal.seen">
+        <div class="ui modal active" style="max-width: 450px;">
+          <form class="ui large form">
+            <div class="ui stacked segment">
+
+              <div class="field">
+                <div class="ui left icon input">
+                  <input type="text" v-model="food_form.use_weight" placeholder="重量">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="food_form.meal_type" type="text" placeholder="类别">
+                </div>
+              </div>
+
+              <div class="ui fluid large teal submit button" v-if="post_button" v-on:click="postData">新增</div>
+              <div class="ui fluid large teal submit button" v-if="!post_button" v-on:click="putData">修改</div>
+            </div>
+
+            <div class="ui error message"></div>
+
+          </form>
+        </div>
+        <div class="ui modal active" style="max-width: 64px; position:relative; top:25%;" >
+          <div v-on:click="reverseSeen" class=" ui mini button">
+            关闭
+          </div>
+        </div>
+      </div>
+
+      <div class="ui large top inverted teal fixed menu">
+        <div class="ui container">
+          <a v-on:click="toHomePage" class="item">Home</a>
+          <a v-on:click="toDatabase" class="item">Database</a>
+          <a v-on:click="toPatient" class="item">Patients</a>
+          <a v-on:click="toRecipe" class="item">Recipes</a>
+          <a v-on:click="toAssessment" class="active item">Assessment</a>
+          <div class="right menu">
+            <div class="item">
+              <a v-on:click="logOut" class="ui inverted teal button">Log Out</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ui vertical segment" style="padding-top:96px; padding-bottom:128px;">
+
+        <div class="ui doubling stackable grid container">
+          <div class="twelve wide centered column">
+
+              <h1 class="ui teal center aligned header">{{ assessment_abstract.name }}</h1>
+
+              <div class="ui fluid action green input">
+                <input type="text" v-model="context" placeholder="查找食物">
+                <button class="ui icon button">
+                  <item>确认选择</item>
+                </button>
+              </div>
+
+              <div class="ui fix segment" v-if="blank.seen" style="margin:0; position:absolute; width: 96.5%;">
+                <ol class="ui list">
+                  <div v-for="food in search">
+                    <li value="*"><a v-on:click="postWakeForm(food)">{{ food.food_name + '  ' + food.calorie + "kcal" }}</a></li>
+                  </div>
+                </ol>
+              </div>
+
+              <h2 class="ui teal center aligned header">早餐</h2>
+
+              <table class="ui celled table">
+
+                <thead>
+                  <tr>
+                    <th>食材名</th>
+                    <th>重量(g)</th>
+                    <th>能量(kcal)</th>
+                    <th>碳水化合物(g)</th>
+                    <th>蛋白质(g)</th>
+                    <th>脂肪(g)</th>
+                    <th>钠(mg)</th>
+                    <th>纤维(g)</th>
+                    <th>修改</th>
+                    <th>删除</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr v-for="detail in assessmentBreakfast">
+
+                    <td>{{ detail.food_name }}</td>
+                    <td>{{ detail.use_weight }}</td>
+                    <td>{{ detail.calorie }}</td>
+                    <td>{{ detail.carbohydrate }}</td>
+                    <td>{{ detail.protein }}</td>
+                    <td>{{ detail.fat }}</td>
+                    <td>{{ detail.sodium }}</td>
+                    <td>{{ detail.fiber }}</td>
+                    <td><a v-on:click="putWakeForm(detail)">修改</a></td>
+                    <td><a v-on:click="deleteData(detail)">删除</a></td>
+                  </tr>
+
+                  <tr>
+                    <td>总计</td>
+                    <td> - </td>
+                    <td>{{ breakfastNutrients.calorie }}</td>
+                    <td>{{ breakfastNutrients.carbohydrate }}</td>
+                    <td>{{ breakfastNutrients.protein }}</td>
+                    <td>{{ breakfastNutrients.fat }}</td>
+                    <td>{{ breakfastNutrients.sodium }}</td>
+                    <td>{{ breakfastNutrients.fiber }}</td>
+                    <td> - </td>
+                    <td> - </td>
+                  </tr>
+                </tbody>
+
+              </table>
+
+              <h2 class="ui teal center aligned header">午餐</h2>
+
+              <table class="ui celled table">
+
+                <thead>
+                  <tr>
+                    <th>食材名</th>
+                    <th>重量(g)</th>
+                    <th>能量(kcal)</th>
+                    <th>碳水化合物(g)</th>
+                    <th>蛋白质(g)</th>
+                    <th>脂肪(g)</th>
+                    <th>钠(mg)</th>
+                    <th>纤维(g)</th>
+                    <th>修改</th>
+                    <th>删除</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr v-for="detail in assessmentLunch">
+
+                    <td>{{ detail.food_name }}</td>
+                    <td>{{ detail.use_weight }}</td>
+                    <td>{{ detail.calorie }}</td>
+                    <td>{{ detail.carbohydrate }}</td>
+                    <td>{{ detail.protein }}</td>
+                    <td>{{ detail.fat }}</td>
+                    <td>{{ detail.sodium }}</td>
+                    <td>{{ detail.fiber }}</td>
+                    <td><a v-on:click="putWakeForm(detail)">修改</a></td>
+                    <td><a v-on:click="deleteData(detail)">删除</a></td>
+                  </tr>
+
+                  <tr>
+                    <td>总计</td>
+                    <td> - </td>
+                    <td>{{ lunchNutrients.calorie }}</td>
+                    <td>{{ lunchNutrients.carbohydrate }}</td>
+                    <td>{{ lunchNutrients.protein }}</td>
+                    <td>{{ lunchNutrients.fat }}</td>
+                    <td>{{ lunchNutrients.sodium }}</td>
+                    <td>{{ lunchNutrients.fiber }}</td>
+                    <td> - </td>
+                    <td> - </td>
+                  </tr>
+                </tbody>
+
+              </table>
+
+              <h2 class="ui teal center aligned header">晚餐</h2>
+
+              <table class="ui celled table">
+
+                <thead>
+                  <tr>
+                    <th>食材名</th>
+                    <th>重量(g)</th>
+                    <th>能量(kcal)</th>
+                    <th>碳水化合物(g)</th>
+                    <th>蛋白质(g)</th>
+                    <th>脂肪(g)</th>
+                    <th>钠(mg)</th>
+                    <th>纤维(g)</th>
+                    <th>修改</th>
+                    <th>删除</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr v-for="detail in assessmentDinner">
+
+                    <td>{{ detail.food_name }}</td>
+                    <td>{{ detail.use_weight }}</td>
+                    <td>{{ detail.calorie }}</td>
+                    <td>{{ detail.carbohydrate }}</td>
+                    <td>{{ detail.protein }}</td>
+                    <td>{{ detail.fat }}</td>
+                    <td>{{ detail.sodium }}</td>
+                    <td>{{ detail.fiber }}</td>
+                    <td><a v-on:click="putWakeForm(detail)">修改</a></td>
+                    <td><a v-on:click="deleteData(detail)">删除</a></td>
+                  </tr>
+
+                  <tr>
+                    <td>总计</td>
+                    <td> - </td>
+                    <td>{{ dinnerNutrients.calorie }}</td>
+                    <td>{{ dinnerNutrients.carbohydrate }}</td>
+                    <td>{{ dinnerNutrients.protein }}</td>
+                    <td>{{ dinnerNutrients.fat }}</td>
+                    <td>{{ dinnerNutrients.sodium }}</td>
+                    <td>{{ dinnerNutrients.fiber }}</td>
+                    <td> - </td>
+                    <td> - </td>
+                  </tr>
+                </tbody>
+
+              </table>
+
+              <h2 class="ui teal center aligned header">加餐</h2>
+
+              <table class="ui celled table">
+
+                <thead>
+                  <tr>
+                    <th>食材名</th>
+                    <th>重量(g)</th>
+                    <th>能量(kcal)</th>
+                    <th>碳水化合物(g)</th>
+                    <th>蛋白质(g)</th>
+                    <th>脂肪(g)</th>
+                    <th>钠(mg)</th>
+                    <th>纤维(g)</th>
+                    <th>修改</th>
+                    <th>删除</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr v-for="detail in assessmentSnack">
+
+                    <td>{{ detail.food_name }}</td>
+                    <td>{{ detail.use_weight }}</td>
+                    <td>{{ detail.calorie }}</td>
+                    <td>{{ detail.carbohydrate }}</td>
+                    <td>{{ detail.protein }}</td>
+                    <td>{{ detail.fat }}</td>
+                    <td>{{ detail.sodium }}</td>
+                    <td>{{ detail.fiber }}</td>
+                    <td><a v-on:click="putWakeForm(detail)">修改</a></td>
+                    <td><a v-on:click="deleteData(detail)">删除</a></td>
+                  </tr>
+
+                  <tr>
+                    <td>总计</td>
+                    <td> - </td>
+                    <td>{{ snackNutrients.calorie }}</td>
+                    <td>{{ snackNutrients.carbohydrate }}</td>
+                    <td>{{ snackNutrients.protein }}</td>
+                    <td>{{ snackNutrients.fat }}</td>
+                    <td>{{ snackNutrients.sodium }}</td>
+                    <td>{{ snackNutrients.fiber }}</td>
+                    <td> - </td>
+                    <td> - </td>
+                  </tr>
+                </tbody>
+
+              </table>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+
+    {% endverbatim %}
+
+    <script type="text/javascript">
+
+      var app1 = new Vue({
+        el:"#app1",
+        data:{
+          context:null,
+          modal:{
+            seen:true,
+          },
+          blank:{
+            seen: false,
+          },
+          search:[],
+          food_form:{
+            id:null,
+            assessment:{{ assessment_id }},
+            food:null,
+            use_weight:null,
+            meal_type:null,
+          },
+          post_button:true,
+          assessment_abstract:[],
+          assessment_detail:[],
+        },
+        methods:{
+          logOut:function(){
+            Cookies.remove("token");
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toHomePage:function(){
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toPatient:function(){
+            window.location.href = '{% url "website:patient" %}';
+          },
+          toDatabase:function(){
+            window.location.href = '{% url "website:food_database" %}';
+          },
+          toAssessment:function(){
+            window.location.href = '{% url "website:assessment_all" %}';
+          },
+          toRecipe:function(){
+            window.location.href = '{% url "website:recipe_all" %}';
+          },
+          reverseSeen:function(){
+            var self = this;
+            self.modal.seen = !self.modal.seen;
+          },
+          getData:function(){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:get_assessment_detail_fake_api" %}' + "{{ assessment_id }}" + '/',
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.assessment_detail = resp;
+              }
+            });
+          },
+          postData:function(){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:get_assessment_detail_fake_api" %}' + "{{ assessment_id }}" + '/',
+              type: 'json',
+              method: 'post',
+              data:{
+                assessment: {{ assessment_id }},
+                food: self.food_form.food,
+                use_weight: self.food_form.use_weight,
+                meal_type: self.food_form.meal_type,
+              },
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.getData();
+                self.reverseSeen();
+              }
+            });
+          },
+          putData:function(){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:modify_assessment_detail_fake_api" %}' + self.food_form.id + '/',
+              type: 'json',
+              method: 'put',
+              data:{
+                assessment: {{ assessment_id }},
+                food: self.food_form.food,
+                use_weight: self.food_form.use_weight,
+                meal_type: self.food_form.meal_type,
+              },
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.getData();
+                self.reverseSeen();
+              }
+            });
+          },
+          deleteData:function(detail){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:modify_assessment_detail_fake_api" %}' + detail.id + '/',
+              type: 'json',
+              method: 'delete',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.getData();
+              }
+            });
+          },
+          getAbstract:function(){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:assessment_list_api" %}' + "{{ assessment_id }}" + '/',
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.assessment_abstract = resp;
+              }
+            });
+          },
+          searchFood: function(){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:food_list_api" %}' + '?name=' + self.context,
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.search = resp;
+              }
+            });
+          },
+          postWakeForm: function(food){
+            var self = this;
+            self.food_form.food = food.id;
+            self.food_form.use_weight = null;
+            self.food_form.meal_type = null;
+            self.post_button = true;
+            self.reverseSeen();
+            self.blank.seen = false;
+          },
+          putWakeForm: function(detail){
+            var self = this;
+            self.post_button = false;
+            reqwest({
+              url: '{% url "lab:modify_assessment_detail_fake_api" %}' + detail.id + '/',
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.food_form.id = resp.id;
+                self.food_form.assessment = resp.assessment.id;
+                self.food_form.food = resp.food.id;
+                self.food_form.use_weight = resp.use_weight;
+                self.food_form.meal_type = resp.meal_type;
+                self.reverseSeen();
+              }
+            });
+          },
+        },
+        watch:{
+          context:function(newContext, oldContext){
+            var self = this;
+            if (self.context == ""){
+              self.blank.seen = false;
+            }else{
+              self.blank.seen = true;
+              self.searchFood();
+            };
+          },
+        },
+        computed:{
+          assessmentComputed: function(){
+            var self = this;
+            var assessment_computed = [];
+            for (var index in self.assessment_detail){
+              var context = {
+                id:null,food_id:null,food_name:null,calorie:null,carbohydrate:null,protein:null,fat:null,sodium:null,fiber:null,
+              };
+              context.id = self.assessment_detail[index].id;
+              context.food_id = self.assessment_detail[index].food.id;
+              context.food_name = self.assessment_detail[index].food.food_name;
+              context.meal_type = self.assessment_detail[index].meal_type;
+              context.use_weight = self.assessment_detail[index].use_weight;
+              context.calorie = self.assessment_detail[index].food.calorie * self.assessment_detail[index].use_weight/100;
+              context.calorie = context.calorie.toFixed(1);
+              context.carbohydrate = self.assessment_detail[index].food.carbohydrate * self.assessment_detail[index].use_weight/100;
+              context.carbohydrate = context.carbohydrate.toFixed(1);
+              context.protein = self.assessment_detail[index].food.protein * self.assessment_detail[index].use_weight/100;
+              context.protein = context.protein.toFixed(1);
+              context.fat = self.assessment_detail[index].food.fat * self.assessment_detail[index].use_weight/100;
+              context.fat = context.fat.toFixed(1);
+              context.sodium = self.assessment_detail[index].food.sodium * self.assessment_detail[index].use_weight/100;
+              context.sodium = context.sodium.toFixed(1);
+              context.fiber = self.assessment_detail[index].food.fiber * self.assessment_detail[index].use_weight/100;
+              context.fiber = context.fiber.toFixed(1);
+              assessment_computed.push(context)
+            };
+            return assessment_computed
+          },
+          assessmentBreakfast:function(){
+            var self = this;
+            var detail_list = self.assessmentComputed;
+            var main_list = [];
+            for (var i in detail_list){
+              if(detail_list[i].meal_type == 1){
+                main_list.push(detail_list[i]);
+              };
+            };
+            return main_list
+          },
+          breakfastNutrients:function(){
+            var self = this;
+            var nutrients = {calorie:0,energy:0,carbohydrate:0,protein:0,fat:0,sodium:0,fiber:0,};
+            for (var i in self.assessmentBreakfast){
+              nutrients.calorie = parseFloat(nutrients.calorie) + parseFloat(self.assessmentBreakfast[i].calorie);
+              nutrients.calorie = nutrients.calorie.toFixed(1);
+              nutrients.energy = parseFloat(nutrients.energy) + parseFloat(self.assessmentBreakfast[i].energy);
+              nutrients.energy = nutrients.energy.toFixed(1);
+              nutrients.carbohydrate = parseFloat(nutrients.carbohydrate) + parseFloat(self.assessmentBreakfast[i].carbohydrate);
+              nutrients.carbohydrate = nutrients.carbohydrate.toFixed(1);
+              nutrients.protein = parseFloat(nutrients.protein) + parseFloat(self.assessmentBreakfast[i].protein);
+              nutrients.protein = nutrients.protein.toFixed(1);
+              nutrients.fat = parseFloat(nutrients.fat) + parseFloat(self.assessmentBreakfast[i].fat);
+              nutrients.fat = nutrients.fat.toFixed(1);
+              nutrients.sodium = parseFloat(nutrients.sodium) + parseFloat(self.assessmentBreakfast[i].sodium);
+              nutrients.sodium = nutrients.sodium.toFixed(1);
+              nutrients.fiber = parseFloat(nutrients.fiber) + parseFloat(self.assessmentBreakfast[i].fiber);
+              nutrients.fiber = nutrients.fiber.toFixed(1);
+            };
+            return nutrients
+          },
+          assessmentLunch:function(){
+            var self = this;
+            var detail_list = self.assessmentComputed;
+            var main_list = [];
+            for (var i in detail_list){
+              if(detail_list[i].meal_type == 2){
+                main_list.push(detail_list[i]);
+              };
+            };
+            return main_list
+          },
+          lunchNutrients:function(){
+            var self = this;
+            var nutrients = {calorie:0,energy:0,carbohydrate:0,protein:0,fat:0,sodium:0,fiber:0,};
+            for (var i in self.assessmentLunch){
+              nutrients.calorie = parseFloat(nutrients.calorie) + parseFloat(self.assessmentLunch[i].calorie);
+              nutrients.calorie = nutrients.calorie.toFixed(1);
+              nutrients.energy = parseFloat(nutrients.energy) + parseFloat(self.assessmentLunch[i].energy);
+              nutrients.energy = nutrients.energy.toFixed(1);
+              nutrients.carbohydrate = parseFloat(nutrients.carbohydrate) + parseFloat(self.assessmentLunch[i].carbohydrate);
+              nutrients.carbohydrate = nutrients.carbohydrate.toFixed(1);
+              nutrients.protein = parseFloat(nutrients.protein) + parseFloat(self.assessmentLunch[i].protein);
+              nutrients.protein = nutrients.protein.toFixed(1);
+              nutrients.fat = parseFloat(nutrients.fat) + parseFloat(self.assessmentLunch[i].fat);
+              nutrients.fat = nutrients.fat.toFixed(1);
+              nutrients.sodium = parseFloat(nutrients.sodium) + parseFloat(self.assessmentLunch[i].sodium);
+              nutrients.sodium = nutrients.sodium.toFixed(1);
+              nutrients.fiber = parseFloat(nutrients.fiber) + parseFloat(self.assessmentLunch[i].fiber);
+              nutrients.fiber = nutrients.fiber.toFixed(1);
+            };
+            return nutrients
+          },
+          assessmentDinner:function(){
+            var self = this;
+            var detail_list = self.assessmentComputed;
+            var main_list = [];
+            for (var i in detail_list){
+              if(detail_list[i].meal_type == 3){
+                main_list.push(detail_list[i]);
+              };
+            };
+            return main_list
+          },
+          dinnerNutrients:function(){
+            var self = this;
+            var nutrients = {calorie:0,energy:0,carbohydrate:0,protein:0,fat:0,sodium:0,fiber:0,};
+            for (var i in self.assessmentDinner){
+              nutrients.calorie = parseFloat(nutrients.calorie) + parseFloat(self.assessmentDinner[i].calorie);
+              nutrients.calorie = nutrients.calorie.toFixed(1);
+              nutrients.energy = parseFloat(nutrients.energy) + parseFloat(self.assessmentDinner[i].energy);
+              nutrients.energy = nutrients.energy.toFixed(1);
+              nutrients.carbohydrate = parseFloat(nutrients.carbohydrate) + parseFloat(self.assessmentDinner[i].carbohydrate);
+              nutrients.carbohydrate = nutrients.carbohydrate.toFixed(1);
+              nutrients.protein = parseFloat(nutrients.protein) + parseFloat(self.assessmentDinner[i].protein);
+              nutrients.protein = nutrients.protein.toFixed(1);
+              nutrients.fat = parseFloat(nutrients.fat) + parseFloat(self.assessmentDinner[i].fat);
+              nutrients.fat = nutrients.fat.toFixed(1);
+              nutrients.sodium = parseFloat(nutrients.sodium) + parseFloat(self.assessmentDinner[i].sodium);
+              nutrients.sodium = nutrients.sodium.toFixed(1);
+              nutrients.fiber = parseFloat(nutrients.fiber) + parseFloat(self.assessmentDinner[i].fiber);
+              nutrients.fiber = nutrients.fiber.toFixed(1);
+            };
+            return nutrients
+          },
+          assessmentSnack:function(){
+            var self = this;
+            var detail_list = self.assessmentComputed;
+            var main_list = [];
+            for (var i in detail_list){
+              if(detail_list[i].meal_type == 4){
+                main_list.push(detail_list[i]);
+              };
+            };
+            return main_list
+          },
+          snackNutrients:function(){
+            var self = this;
+            var nutrients = {calorie:0,energy:0,carbohydrate:0,protein:0,fat:0,sodium:0,fiber:0,};
+            for (var i in self.assessmentSnack){
+              nutrients.calorie = parseFloat(nutrients.calorie) + parseFloat(self.assessmentSnack[i].calorie);
+              nutrients.calorie = nutrients.calorie.toFixed(1);
+              nutrients.energy = parseFloat(nutrients.energy) + parseFloat(self.assessmentSnack[i].energy);
+              nutrients.energy = nutrients.energy.toFixed(1);
+              nutrients.carbohydrate = parseFloat(nutrients.carbohydrate) + parseFloat(self.assessmentSnack[i].carbohydrate);
+              nutrients.carbohydrate = nutrients.carbohydrate.toFixed(1);
+              nutrients.protein = parseFloat(nutrients.protein) + parseFloat(self.assessmentSnack[i].protein);
+              nutrients.protein = nutrients.protein.toFixed(1);
+              nutrients.fat = parseFloat(nutrients.fat) + parseFloat(self.assessmentSnack[i].fat);
+              nutrients.fat = nutrients.fat.toFixed(1);
+              nutrients.sodium = parseFloat(nutrients.sodium) + parseFloat(self.assessmentSnack[i].sodium);
+              nutrients.sodium = nutrients.sodium.toFixed(1);
+              nutrients.fiber = parseFloat(nutrients.fiber) + parseFloat(self.assessmentSnack[i].fiber);
+              nutrients.fiber = nutrients.fiber.toFixed(1);
+            };
+            return nutrients
+          },
+        },
+        mounted:function(){
+          if (Cookies.get("token")){
+            this.getAbstract();
+            this.getData();
+          } else {
+            window.location.href = '{% url "website:homepage" %}';
+          };
+        },
+      });
+
+    </script>
+
+  </body>
+</html>

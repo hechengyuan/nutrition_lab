@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <link href="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/semantic-ui/2.4.1/semantic.min.js"></script>
+    <script src="https://cdn.bootcss.com/reqwest/2.0.5/reqwest.js"></script>
+    <script src="https://cdn.bootcss.com/vue/2.6.10/vue.js"></script>
+    <script src="https://cdn.bootcss.com/js-cookie/latest/js.cookie.js"></script>
+    <title>Patient</title>
+  </head>
+  <body>
+
+    {% verbatim %}
+
+    <div class="pusher" id="app1">
+
+      <div class="ui dimmer active" v-if="!modal.seen">
+        <div class="ui modal active" style="max-width: 450px;">
+          <form class="ui large form">
+            <div class="ui stacked segment">
+
+              <div class="field">
+                <div class="ui left icon input">
+                  <input type="text" v-model="patient_form.index" placeholder="患者Index">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="patient_form.name" type="text" placeholder="患者姓名">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="patient_form.age" type="text" placeholder="患者年龄">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="patient_form.gender" type="text" placeholder="患者性别">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="patient_form.weight" type="text" placeholder="体重">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="patient_form.height" type="text" placeholder="身高">
+                </div>
+              </div>
+              <div class="field">
+                <div class="ui left icon input">
+                  <input v-model="patient_form.disease" type="text" placeholder="疾病">
+                </div>
+              </div>
+              <div class="ui fluid large teal submit button" v-if="post_button" v-on:click="postData">新增</div>
+              <div class="ui fluid large teal submit button" v-if="!post_button" v-on:click="putData">修改</div>
+            </div>
+
+            <div class="ui error message"></div>
+
+          </form>
+        </div>
+        <div class="ui modal active" style="max-width: 64px; position:relative; top:45%;" >
+          <div v-on:click="reverseSeen" class=" ui mini button">
+            关闭
+          </div>
+        </div>
+      </div>
+
+      <div class="ui large top inverted teal fixed menu">
+        <div class="ui container">
+          <a class="item" v-on:click="toHomePage">Home</a>
+          <a class="item" v-on:click="toDatabase">Database</a>
+          <a class="active item" v-on:click="toPatient">Patients</a>
+          <a class="item" v-on:click="toRecipe">Recipes</a>
+          <a class="item" v-on:click="toAssessment">Assessment</a>
+          <div class="right menu">
+            <div class="item">
+              <a class="ui inverted teal button" v-on:click="logOut">Log Out</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ui vertical segment" style="padding-top:96px; padding-bottom:128px;">
+
+        <div class="ui doubling stackable grid container">
+          <div class="twelve wide centered column">
+
+              <h1 class="ui teal center aligned header">All patients' information</h1>
+
+              <a class="ui teal mini right floated button" style="margin-bottom:16px;" v-on:click="postWakeForm">New</a>
+
+              <table class="ui celled table">
+
+                <thead>
+                  <tr>
+                    <th>Id</th>
+                    <th>Index</th>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>Height</th>
+                    <th>Weight</th>
+                    <th>Disease</th>
+                    <th>Abstract</th>
+
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr v-for="patient in patients">
+                    <td>{{ patient.id }}</td>
+                    <td>{{ patient.index }}</td>
+                    <td>{{ patient.name }}</td>
+                    <td>{{ patient.age }}</td>
+                    <td>{{ patient.gender=1?("男"):("女") }}</td>
+                    <td>{{ patient.height + "cm" }}</td>
+                    <td>{{ patient.weight + "kg" }}</td>
+                    <td>{{ patient.disease }}</td>
+                    <td><a v-on:click="putWakeForm(patient)">modify</a></td>
+
+                  </tr>
+
+                </tbody>
+
+              </table>
+
+              <div class="ui page centered grid" style="padding-top:32px;">
+
+                <div class="ui borderless pagination menu">
+                  <a class="item" v-on:click="getPreviousPage">   ←Previous  </a>
+                    <i class="item">Now Page {{ page }}</i>
+                    <a class="item" v-on:click="getNextPage">  Next→  </a>
+                  </div>
+
+              </div>
+
+              
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    {% endverbatim %}
+
+    <script type="text/javascript">
+
+      var app1 = new Vue({
+        el: "#app1",
+        data:{
+          modal:{
+            seen:true,
+          },
+          patients:[],
+          patient_form:{
+            id:null,
+            index:null,
+            name:null,
+            gender:null,
+            height:null,
+            weight:null,
+            disease:null,
+          },
+          page:1,
+          post_button: true,
+        },
+        methods:{
+          getData: function (){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:patient_list_api" %}' + '?page=' + self.page,
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.patients = resp;
+              }
+            });
+          },
+          postData: function(){
+            var self = this;
+            reqwest({
+              url: '{% url "lab:patient_list_api" %}',
+              method: 'post',
+              type: 'json',
+              headers: {
+                "Authorization":"Token " + Cookies.get("token"),
+              },
+              data:{
+                index : self.patient_form.index,
+                name : self.patient_form.name,
+                age : self.patient_form.age,
+                gender : self.patient_form.gender,
+                weight : self.patient_form.weight,
+                height : self.patient_form.height,
+                disease : self.patient_form.disease,
+              },
+              success: function(resp){
+                self.getData();
+                self.reverseSeen();
+              }
+            });
+          },
+
+          putData: function(){
+            var self = this;
+            reqwest({
+              url: "{% url "lab:patient_list_api" %}" + self.patient_form.id + '/',
+              type: 'json',
+              method:'put',
+              headers: {
+                "Authorization":"Token " + Cookies.get("token"),
+              },
+              data:{
+                index : self.patient_form.index,
+                name : self.patient_form.name,
+                age : self.patient_form.age,
+                gender : self.patient_form.gender,
+                weight : self.patient_form.weight,
+                height : self.patient_form.height,
+                disease : self.patient_form.disease,
+              },
+              success: function(resp){
+                self.getData();
+                self.reverseSeen();
+              },
+            });
+          },
+
+          getNextPage: function (){
+            var self = this;
+            self.page = self.page + 1;
+            self.getData();
+          },
+          getPreviousPage: function(){
+            var self = this;
+            if (self.page < 2){
+            }else{
+              self.page = self.page - 1;
+              self.getData();
+            };
+          },
+
+          logOut:function(){
+            Cookies.remove("token");
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toHomePage:function(){
+            window.location.href = '{% url "website:homepage" %}';
+          },
+          toPatient:function(){
+            window.location.href = '{% url "website:patient" %}';
+          },
+          toDatabase:function(){
+            window.location.href = '{% url "website:food_database" %}';
+          },
+          toAssessment:function(){
+            window.location.href = '{% url "website:assessment_all" %}';
+          },
+          toRecipe:function(){
+            window.location.href = '{% url "website:recipe_all" %}';
+          },
+          reverseSeen:function() {
+            var self = this;
+            self.modal.seen = !self.modal.seen
+          },
+          postWakeForm:function(){
+            var self = this;
+            self.post_button = true;
+            for (var key in self.patient_form){
+              self.patient_form[key] = null;
+            };
+            self.reverseSeen();
+          },
+          putWakeForm: function(patient){
+            var self = this;
+            var id = patient.id;
+            self.post_button = false;
+            for (var key in self.patient_form){
+              self.patient_form[key] = null;
+            };
+            reqwest({
+              url: "{% url "lab:patient_list_api" %}" + id + '/',
+              type: 'json',
+              method: 'get',
+              headers:{"Authorization":"Token " + Cookies.get("token"),},
+              success: function(resp){
+                self.patient_form.id = resp.id;
+                self.patient_form.index = resp.index;
+                self.patient_form.name = resp.name;
+                self.patient_form.age = resp.age;
+                self.patient_form.gender = resp.gender;
+                self.patient_form.weight = resp.weight;
+                self.patient_form.height = resp.height;
+                self.patient_form.disease = resp.disease;
+                self.reverseSeen();
+              },
+            });
+          },
+        },
+        mounted:function(){
+          if (Cookies.get("token")){
+            this.getData();
+          } else {
+            window.location.href = '{% url "website:homepage" %}';
+          };
+        },
+      });
+
+    </script>
+
+
+  </body>
+</html>
